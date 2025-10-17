@@ -47,15 +47,14 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          body_path: CHANGELOG  # 动态加载 changelog
+          body_path: CHANGELOG
           draft: false
           prerelease: false
-          files: .next/**/*  # 上传构建文件
-          overwrite_files: true  # 覆盖现有 assets
+          files: .next/**/*
+          overwrite_files: true
 
-      # 可选：保留 upload-artifact 用于调试
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-files
-          path: .next/          retention-days: 30
+          path: .next/
