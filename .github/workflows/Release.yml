@@ -3,10 +3,10 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*' # 当推送以 'v' 开头的标签时触发
 
 permissions:
-  contents: write
+  contents: write # 给 release 创建权限
 
 jobs:
   release:
@@ -18,6 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 先设置 Node.js 版本，保证后续 pnpm 用 Node v22
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -36,25 +37,31 @@ jobs:
         env:
           GITHUB_ACTIONS: 'true'
 
-      - name: Build project
-        run: pnpm run build
-
       - name: Create Release
-        id: release
-        uses: softprops/action-gh-release@v2
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body_path: CHANGELOG
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## 变更日志
+
+            请查看 [CHANGELOG](CHANGELOG) 文件了解详细变更内容。
+
+            ## 下载
+
+            - [Source code (zip)](https://github.com/${{ github.repository }}/archive/${{ github.ref_name }}.zip)
+            - [Source code (tar.gz)](https://github.com/${{ github.repository }}/archive/${{ github.ref_name }}.tar.gz)
           draft: false
           prerelease: false
-          files: .next/**/*
-          overwrite_files: true
+
+      - name: Build project
+        run: pnpm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-files
           path: .next/
+          retention-days: 30
