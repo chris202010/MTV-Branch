@@ -6,7 +6,8 @@ on:
       - 'v*' # 当推送以 'v' 开头的标签时触发
 
 permissions:
-  contents: write # 给 release 创建权限
+  contents: write # 给发布 release 的权限
+  actions: read
 
 jobs:
   release:
@@ -18,32 +19,46 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 先设置 Node.js 版本，保证后续 pnpm 用 Node v22
+      # 设置 Node.js 环境
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
+      # 安装 pnpm
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 10.14.0
 
+      # 安装依赖
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 转换 changelog
       - name: Run convert-changelog script
         run: node scripts/convert-changelog.js
         env:
           GITHUB_ACTIONS: 'true'
 
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 构建项目
+      - name: Build project
+        run: pnpm run build
+
+      # 上传构建产物（可选）
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-files
+          path: .next/
+          retention-days: 30
+
+      # 创建 GitHub Release（基于现有 tag）
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           body: |
             ## 变更日志
 
@@ -53,15 +68,5 @@ jobs:
 
             - [Source code (zip)](https://github.com/${{ github.repository }}/archive/${{ github.ref_name }}.zip)
             - [Source code (tar.gz)](https://github.com/${{ github.repository }}/archive/${{ github.ref_name }}.tar.gz)
-          draft: false
-          prerelease: false
-
-      - name: Build project
-        run: pnpm run build
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-files
-          path: .next/
-          retention-days: 30
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
